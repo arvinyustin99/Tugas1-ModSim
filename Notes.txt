@@ -1,0 +1,7 @@
+event type
+1. move to 3
+2. at 3
+3. move to 1
+4. at 1
+5. move to 2
+6. at 2
