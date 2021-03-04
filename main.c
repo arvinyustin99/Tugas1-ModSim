@@ -15,6 +15,10 @@
 #define EVENT_ARRIVAL_3 5
 #define EVENT_DEPART_3 6
 
+#define QUEUE_GATE_1 1
+#define QUEUE_GATE_2 2
+#define QUEUE_GATE_3 3
+
 #define EVENT_END_SIMUL 0
 
 #define STREAM_INTERARRIVAL 1
@@ -28,11 +32,29 @@ double  mean_interarrival[NUM_STATIONS + 1],
         length_simulation,
         prob_stations_1_2[2 + 1];
 
+void init_model(){
+  /**
+   * @brief initiate the passenger incoming to Station
+   * @brief simulation starts from Station 3
+   * 
+   */
+  current_station = 3;
+
+  event_schedule(sim_time + expon(mean_interarrival[1]), EVENT_ADD_QUEUE_1);
+  event_schedule(sim_time + expon(mean_interarrival[2]), EVENT_ADD_QUEUE_2);
+  event_schedule(sim_time + expon(mean_interarrival[3]), EVENT_ADD_QUEUE_3);
+}
+
 void arrive(int current_gate){
-    event_schedule(sim_time + expon(mean_interarrival[1]), EVENT_ADD_QUEUE_1);
-    event_schedule(sim_time + expon(mean_interarrival[2]), EVENT_ADD_QUEUE_2);
-    event_schedule(sim_time + expon(mean_interarrival[3]), EVENT_ADD_QUEUE_3);
-    
+  /**
+   * @brief Schedule next arrival
+   * 
+   */
+    event_schedule(sim_time + expon(mean_interarrival[current_gate], STREAM_INTERARRIVAL), current_gate);
+
+    // 
+
+
 }
 
 int main(){
