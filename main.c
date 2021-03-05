@@ -11,6 +11,7 @@
 #define EVENT_UNLOAD 11
 #define EVENT_LOAD 12
 #define EVENT_BUS_LEAVE 13
+#define EVENT_DEPART 14
 #define EVENT_END_SIMUL 0
 
 #define QUEUE_GATE_1 1
@@ -33,15 +34,16 @@
 #define STREAM_LOADING 5
 #define STREAM_RANDOM_GATE 6
 
+#define BUS_SPEED 30.0
 #define NUM_STATIONS 3
 
 int num_stations,
     current_station,
     isBusArrived,
     isBusLeaving,
-    isReadyToLoad,
-    routeTime[NUM_STATIONS + 1];
+    isReadyToLoad;
 double  mean_interarrival[NUM_STATIONS + 1],
+        routeTime[NUM_STATIONS + 1],
         length_simulation,
         prob_stations_1_2[2 + 1];
 
@@ -61,9 +63,9 @@ void init_model(){
    * 
    */
   
-  routeTime[1] = 1.0;
-  routeTime[2] = 4.5;
-  routeTime[3] = 4.5;
+  routeTime[1] = (1.0 / BUS_SPEED) * 3600;
+  routeTime[2] = (4.5 / BUS_SPEED) * 3600;
+  routeTime[3] = (4.5 / BUS_SPEED) * 3600;
 
   mean_interarrival[1] = (double) (3600 / 14);
   mean_interarrival[2] = (double) (3600 / 10);
@@ -82,6 +84,7 @@ void arrive(int current_gate){
     event_schedule(sim_time + expon(mean_interarrival[current_gate], current_gate), current_gate);
 
   // Insert passenger into queue
+  // ...
 
   /**
    * 
@@ -99,9 +102,11 @@ void depart(){
   /**
    * Set to the next station
    * Set the bus haven't arrived to Next station
+   * Schedule event for next arrival
    */
   current_station = (current_station % 3) + 1;
   isBusArrived = 0;
+  event_schedule(sim_time + routeTime[current_station], EVENT_UNLOAD);
 }
 
 void unload(){
@@ -114,10 +119,6 @@ void unload(){
     event_schedule(WAIT_IN_STATION * 60, EVENT_BUS_LEAVE);
     isBusArrived = 1;
   }
-  /**
-   * If already set, continue unload
-   * Set event for the next unload
-   */
   
   // Check if any passenger in bus to be unloaded in this bus
   // Check if time < 5 min
@@ -126,13 +127,12 @@ void unload(){
     // remove the queue with POP, and push BUS queue
     if (list_size[QUEUE_BUS] > 0 && passengerOnQueue(current_station, queue_on_bus)){
 
-      /**
-       * @brief CODE FOR UNLOADING PASSENGER OFF THE BUS
-       * 
-       */
+      // CODE FOR UNLOADING PASSENGER OFF THE BUS
+      // ...
       list_remove(FIRST, QUEUE_BUS);
 
       // Update Stats HERE
+      // ...
       
     }
 
@@ -158,12 +158,15 @@ void load(){
   if (isBusLeaving != 1){
     if (queueNotFull(queue_on_bus) && list_size[current_station] > 0){
       // pop queue on station
+      // ...
       list_remove(FIRST, current_station);
       
       // push element to bus
+      // ...
       list_file(LAST, QUEUE_BUS);
       
       // Update Stats HERE
+      // ...
 
       // Check if there's queue
       if (list_size[current_station] > 0){
@@ -171,7 +174,7 @@ void load(){
         event_schedule(sim_time + (double) uniform(LOAD_MIN, LOAD_MAX, STREAM_LOADING), EVENT_LOAD);
       }
     }
-    // If there's no queue at the moment, trigger wait moment every 30s
+    // If there's no queue at the moment, trigger wait moment every 2s
     event_schedule(sim_time + (double) 2.0, EVENT_LOAD);
   }
   else{
