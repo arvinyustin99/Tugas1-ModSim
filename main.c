@@ -8,12 +8,8 @@
 #define EVENT_ADD_QUEUE_1 8
 #define EVENT_ADD_QUEUE_2 9
 #define EVENT_ADD_QUEUE_3 10
-#define EVENT_ARRIVAL_1 1
-#define EVENT_DEPART_1 2
-#define EVENT_ARRIVAL_2 3
-#define EVENT_DEPART_2 4
-#define EVENT_ARRIVAL_3 5
-#define EVENT_DEPART_3 6
+
+#define STREAM_INTERARRIVAL 3
 
 #define QUEUE_GATE_1 1
 #define QUEUE_GATE_2 2
@@ -40,9 +36,9 @@ void init_model(){
    */
   current_station = 3;
 
-  event_schedule(sim_time + expon(mean_interarrival[1]), EVENT_ADD_QUEUE_1);
-  event_schedule(sim_time + expon(mean_interarrival[2]), EVENT_ADD_QUEUE_2);
-  event_schedule(sim_time + expon(mean_interarrival[3]), EVENT_ADD_QUEUE_3);
+  event_schedule(sim_time + expon(mean_interarrival[1], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_1);
+  event_schedule(sim_time + expon(mean_interarrival[2], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_2);
+  event_schedule(sim_time + expon(mean_interarrival[3], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_3);
 }
 
 void arrive(int current_gate){
@@ -52,9 +48,36 @@ void arrive(int current_gate){
    */
     event_schedule(sim_time + expon(mean_interarrival[current_gate], STREAM_INTERARRIVAL), current_gate);
 
-    // 
+  // Insert passenger into queue
 
+  /**
+   * 
+   * int gate_destination = random_integer(<isi probabilities disini>, 2);
+   * queueElement q_temp = createElement(sim_time, current_gate, gate_destination);
+   * listInsert(q_temp, queue[current_gate]);
+   * popQueue(<statiun destination>, queue);
+   * code di atas akan mengganti 2 baris di bawah ini
+   */
+  transfer[1] = sim_time;
+  list_file(LAST, QUEUE_GATE_1);
+}
 
+void depart(){
+  /**
+   * Checking
+   */
+  // check current gate = 1
+  current_station = ((current_station + 1) % 3) + 1;
+}
+
+void unload(){
+  // turn on EVENT for DEpart
+  event_schedule(<5 menit>, EVENT_DEPART);
+}
+
+void load(){
+  // check waktu sekarang > next_event_type
+  event_cancel();
 }
 
 int main(){
@@ -66,16 +89,19 @@ int main(){
     timing();
 
     switch(next_event_type){
-      case EVENT_QUEUE_1:
-      case EVENT_QUEUE_2:
-      case EVENT_QUEUE_3:
+      case EVENT_ADD_QUEUE_1:
+      case EVENT_ADD_QUEUE_2:
+      case EVENT_ADD_QUEUE_3:
         arrive(next_event_type);
         break;
-      case EVENT_LOAD:
-        load(current_station);
+      case EVENT_DEPART:
+        depart();
         break;
       case EVENT_UNLOAD:
-        unload(current_station);
+        unload();
+        break;
+      case EVENT_LOAD:
+        load();
         break;
     }
   }while (next_event_type != EVENT_END_SIMUL);
