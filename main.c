@@ -8,23 +8,39 @@
 #define EVENT_ADD_QUEUE_1 8
 #define EVENT_ADD_QUEUE_2 9
 #define EVENT_ADD_QUEUE_3 10
-
-#define STREAM_INTERARRIVAL 3
+#define EVENT_UNLOAD 11
+#define EVENT_LOAD 12
+#define EVENT_BUS_LEAVE 13
+#define EVENT_END_SIMUL 0
 
 #define QUEUE_GATE_1 1
 #define QUEUE_GATE_2 2
 #define QUEUE_GATE_3 3
+#define QUEUE_BUS 4
 
-#define EVENT_END_SIMUL 0
+#define LOAD_MIN 15
+#define LOAD_MAX 25
+#define WAIT_IN_STATION 5
 
-#define STREAM_INTERARRIVAL 1
-#define STREAM_ARRIVAL_AT_GATE 2
+#define UNLOAD_MIN 16
+#define UNLOAD_MAX 24
+
+
+#define STREAM_INTERARRIVAL_1 1
+#define STREAM_INTERARRIVAL_2 2
+#define STREAM_INTERARRIVAL_3 3
+#define STREAM_UNLOADING 4
+#define STREAM_LOADING 5
+#define STREAM_RANDOM_GATE 6
+
 #define NUM_STATIONS 3
 
 int num_stations,
     current_station,
     isBusArrived,
-    route[NUM_STATIONS + 1];
+    isBusLeaving,
+    isReadyToLoad,
+    routeTime[NUM_STATIONS + 1];
 double  mean_interarrival[NUM_STATIONS + 1],
         length_simulation,
         prob_stations_1_2[2 + 1];
@@ -37,10 +53,25 @@ void init_model(){
    */
   current_station = 3;
   isBusArrived = 0;
+  isBusLeaving = 0;
+  isReadyToLoad = 0;
 
-  event_schedule(sim_time + expon(mean_interarrival[1], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_1);
-  event_schedule(sim_time + expon(mean_interarrival[2], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_2);
-  event_schedule(sim_time + expon(mean_interarrival[3], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_3);
+  /**
+   * @brief routeTime[1] = mean time travelled from Station 1 to 2, and so on
+   * 
+   */
+  
+  routeTime[1] = 1.0;
+  routeTime[2] = 4.5;
+  routeTime[3] = 4.5;
+
+  mean_interarrival[1] = (double) (3600 / 14);
+  mean_interarrival[2] = (double) (3600 / 10);
+  mean_interarrival[3] = (double) (3600 / 24);
+
+  event_schedule(sim_time + expon(mean_interarrival[1], STREAM_INTERARRIVAL_1), EVENT_ADD_QUEUE_1);
+  event_schedule(sim_time + expon(mean_interarrival[2], STREAM_INTERARRIVAL_2), EVENT_ADD_QUEUE_2);
+  event_schedule(sim_time + expon(mean_interarrival[3], STREAM_INTERARRIVAL_3), EVENT_ADD_QUEUE_3);
 }
 
 void arrive(int current_gate){
@@ -48,7 +79,7 @@ void arrive(int current_gate){
    * @brief Schedule next arrival
    * 
    */
-    event_schedule(sim_time + expon(mean_interarrival[current_gate], STREAM_INTERARRIVAL), current_gate);
+    event_schedule(sim_time + expon(mean_interarrival[current_gate], current_gate), current_gate);
 
   // Insert passenger into queue
 
@@ -80,24 +111,81 @@ void unload(){
    *
    */
   if (isBusArrived == 0){
-    event_schedule(<5 menit>, EVENT_DEPART);
+    event_schedule(WAIT_IN_STATION * 60, EVENT_BUS_LEAVE);
     isBusArrived = 1;
   }
   /**
    * If already set, continue unload
    * Set event for the next unload
    */
-  event_schedule(sim_time + expon)
+  
+  // Check if any passenger in bus to be unloaded in this bus
+  // Check if time < 5 min
+  if (isBusLeaving != 1){
+    // check if corresponding station has queue
+    // remove the queue with POP, and push BUS queue
+    if (list_size[QUEUE_BUS] > 0 && passengerOnQueue(current_station, queue_on_bus)){
+
+      /**
+       * @brief CODE FOR UNLOADING PASSENGER OFF THE BUS
+       * 
+       */
+      list_remove(FIRST, QUEUE_BUS);
+
+      // Update Stats HERE
+      
+    }
+
+    // check if there's more queue, schedule event
+    if (passengerOnQueue(current_station, queue_on_bus)){
+      event_schedule(sim_time + (double) uniform(UNLOAD_MIN, UNLOAD_MAX, STREAM_UNLOADING), EVENT_UNLOAD);
+    }
+    // else, BUS ready to LOAD
+    else {
+      event_schedule(sim_time, EVENT_LOAD);
+      isReadyToLoad = 1;
+    }
+  }
+  // Bus is leaving, schedule departure
+  else{
+    event_schedule(sim_time, EVENT_DEPART);
+    event_cancel(EVENT_UNLOAD);
+  }
 }
 
 void load(){
   // check waktu sekarang > next_event_type
-  event_cancel();
+  if (isBusLeaving != 1){
+    if (queueNotFull(queue_on_bus) && list_size[current_station] > 0){
+      // pop queue on station
+      list_remove(FIRST, current_station);
+      
+      // push element to bus
+      list_file(LAST, QUEUE_BUS);
+      
+      // Update Stats HERE
+
+      // Check if there's queue
+      if (list_size[current_station] > 0){
+        // Schedule for loading
+        event_schedule(sim_time + (double) uniform(LOAD_MIN, LOAD_MAX, STREAM_LOADING), EVENT_LOAD);
+      }
+    }
+    // If there's no queue at the moment, trigger wait moment every 30s
+    event_schedule(sim_time + (double) 2.0, EVENT_LOAD);
+  }
+  else{
+    event_schedule(sim_time, EVENT_DEPART);
+    event_cancel(EVENT_LOAD);
+  }
+}
+
+void flagBusLeaving(){
+  isBusLeaving = 1;
 }
 
 int main(){
   init_simlib();
-
 
   event_schedule(length_simulation, EVENT_END_SIMUL);
   do{
@@ -117,6 +205,9 @@ int main(){
         break;
       case EVENT_LOAD:
         load();
+        break;
+      case EVENT_BUS_LEAVE:
+        flagBusLeaving();
         break;
     }
   }while (next_event_type != EVENT_END_SIMUL);
