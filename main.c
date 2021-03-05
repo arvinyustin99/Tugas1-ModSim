@@ -23,6 +23,7 @@
 
 int num_stations,
     current_station,
+    isBusArrived,
     route[NUM_STATIONS + 1];
 double  mean_interarrival[NUM_STATIONS + 1],
         length_simulation,
@@ -35,6 +36,7 @@ void init_model(){
    * 
    */
   current_station = 3;
+  isBusArrived = 0;
 
   event_schedule(sim_time + expon(mean_interarrival[1], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_1);
   event_schedule(sim_time + expon(mean_interarrival[2], STREAM_INTERARRIVAL), EVENT_ADD_QUEUE_2);
@@ -64,15 +66,28 @@ void arrive(int current_gate){
 
 void depart(){
   /**
-   * Checking
+   * Set to the next station
+   * Set the bus haven't arrived to Next station
    */
-  // check current gate = 1
-  current_station = ((current_station + 1) % 3) + 1;
+  current_station = (current_station % 3) + 1;
+  isBusArrived = 0;
 }
 
 void unload(){
-  // turn on EVENT for DEpart
-  event_schedule(<5 menit>, EVENT_DEPART);
+  /**
+   *  Check if the bus just arrived,
+   *  Set event for the next leaving station
+   *
+   */
+  if (isBusArrived == 0){
+    event_schedule(<5 menit>, EVENT_DEPART);
+    isBusArrived = 1;
+  }
+  /**
+   * If already set, continue unload
+   * Set event for the next unload
+   */
+  event_schedule(sim_time + expon)
 }
 
 void load(){
