@@ -1,10 +1,5 @@
 #include "simlib.h"
 
-/**
- * @brief defining EVENT TYPE
- * 
- */
-
 #define EVENT_ADD_QUEUE_1 8
 #define EVENT_ADD_QUEUE_2 9
 #define EVENT_ADD_QUEUE_3 10
@@ -160,8 +155,9 @@ void unload(){
       // ...
       list_remove(FIRST, QUEUE_BUS);
 
-      // Update Stats HERE
+      // Update Stats HERE for DELAYS in station
       // ...
+      sampst(sampst_delay_gate[current_station])
       
     }
 
@@ -184,6 +180,7 @@ void unload(){
 
 void load(){
   // check waktu sekarang > next_event_type
+  Queue temp;
   if (isBusLeaving != 1){
     if (queueNotFull(queue_on_bus) && list_size[current_station] > 0){
       // pop queue on station
@@ -196,6 +193,8 @@ void load(){
       
       // Update Stats HERE
       // ...
+      // input the delay of each passenger to be loaded in corresponding station
+      sampst(temp.arrival, sampst_delay_gate[current_station]);
 
       // Check if there's queue
       if (list_size[current_station] > 0){
