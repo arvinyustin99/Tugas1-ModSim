@@ -142,6 +142,8 @@ void unload(){
 
     // Update stats for Number of Queue in each Station
     sampst(list_size[current_station], sampst_queue_gate[current_station]);
+    // Update stats for Number passenger in Bus
+    sampst(list_size[QUEUE_BUS], SAMPST_SEAT_BUS);
   }
   
   // Check if any passenger in bus to be unloaded in this bus
@@ -157,7 +159,7 @@ void unload(){
 
       // Update Stats HERE for DELAYS in station
       // ...
-      sampst(sampst_delay_gate[current_station])
+      sampst(sampst_delay_gate[current_station]);
       
     }
 
@@ -192,9 +194,9 @@ void load(){
       list_file(LAST, QUEUE_BUS);
       
       // Update Stats HERE
-      // ...
+
       // input the delay of each passenger to be loaded in corresponding station
-      sampst(temp.arrival, sampst_delay_gate[current_station]);
+      sampst(sim_time - temp.arrival, sampst_delay_gate[current_station]);
 
       // Check if there's queue
       if (list_size[current_station] > 0){
