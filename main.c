@@ -26,6 +26,15 @@
 #define UNLOAD_MIN 16
 #define UNLOAD_MAX 24
 
+#define SAMPST_DELAY_GATE_1 1
+#define SAMPST_DELAY_GATE_2 2
+#define SAMPST_DELAY_GATE_3 3
+
+#define SAMPST_QUEUE_GATE_1 4
+#define SAMPST_QUEUE_GATE_2 5
+#define SAMPST_QUEUE_GATE_3 6
+
+#define SAMPST_SEAT_BUS 7
 
 #define STREAM_INTERARRIVAL_1 1
 #define STREAM_INTERARRIVAL_2 2
@@ -37,6 +46,9 @@
 #define BUS_SPEED 30.0
 #define NUM_STATIONS 3
 
+short sampst_delay_gate[NUM_STATIONS + 1],
+      sampst_queue_gate[NUM_STATIONS + 1];
+
 int num_stations,
     current_station,
     isBusArrived,
@@ -47,17 +59,31 @@ double  mean_interarrival[NUM_STATIONS + 1],
         length_simulation,
         prob_stations_1_2[2 + 1];
 
+void init_model();
+void unload();
+void load();
+void depart();
+void arrive(int current_gate);
+void flagBusLeaving();
+
 void init_model(){
   /**
-   * @brief initiate the passenger incoming to Station
-   * @brief simulation starts from Station 3
-   * 
+   * - initiate the passenger incoming to Station
+   * - simulation starts from Station 3
+   * - initiate the array for easy access to sampst
    */
   current_station = 3;
   isBusArrived = 0;
   isBusLeaving = 0;
   isReadyToLoad = 0;
 
+  sampst_delay_gate[1] = SAMPST_DELAY_GATE_1;
+  sampst_delay_gate[2] = SAMPST_DELAY_GATE_2;
+  sampst_delay_gate[3] = SAMPST_DELAY_GATE_3;
+
+  sampst_queue_gate[1] = SAMPST_QUEUE_GATE_1;
+  sampst_queue_gate[2] = SAMPST_QUEUE_GATE_2;
+  sampst_queue_gate[3] = SAMPST_QUEUE_GATE_3;
   /**
    * @brief routeTime[1] = mean time travelled from Station 1 to 2, and so on
    * 
@@ -111,13 +137,16 @@ void depart(){
 
 void unload(){
   /**
-   *  Check if the bus just arrived,
-   *  Set event for the next leaving station
+   *  - Check if the bus just arrived,
+   *  - Set event for the next leaving station
    *
    */
   if (isBusArrived == 0){
     event_schedule(WAIT_IN_STATION * 60, EVENT_BUS_LEAVE);
     isBusArrived = 1;
+
+    // Update stats for Number of Queue in each Station
+    sampst(list_size[current_station], sampst_queue_gate[current_station]);
   }
   
   // Check if any passenger in bus to be unloaded in this bus
