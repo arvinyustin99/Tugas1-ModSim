@@ -2,30 +2,32 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 
+#define MAX_CAPACITY 25
 
-struct Arr {
+typedef struct Arr {
 	double arrival;
 	int gate_origin;
 	int gate_dest;
-};
+} Arr;
 
-struct QNode { 
+typedef struct QNode { 
 	struct Arr key;
 	struct QNode* next; 
-}; 
+} QNode; 
 
 // The queue, head stores the head node of LL and tail stores the 
 // last node of LL 
-struct Queue { 
-	struct QNode *head, *tail; 
-}; 
+typedef struct Queue { 
+	QNode *head, *tail;
+	int capacity;
+} Queue; 
 
 
 
 // A utility function to create a new linked list node. 
-struct QNode* newNode(struct Arr a) 
+QNode* newNode(Arr a) 
 { 
-	struct QNode* temp = (struct QNode*)malloc(sizeof(struct QNode));
+	QNode* temp = (QNode*)malloc(sizeof(QNode));
 
 	temp->key.arrival = a.arrival;
 	temp->key.gate_origin = a.gate_origin;
@@ -36,14 +38,26 @@ struct QNode* newNode(struct Arr a)
 } 
 
 // A utility function to create an empty queue 
-struct Queue* createQueue() 
+Queue* createQueue() 
 { 
-	struct Queue* q = (struct Queue*)malloc(sizeof(struct Queue)); 
-	q->head = q->tail = NULL; 
+	Queue* q = (Queue*)malloc(sizeof(Queue)); 
+	q->head = q->tail = NULL;
+	q->capacity = 0;
 	return q; 
-} 
-
-struct Arr createArr(double i, int j, int k) {
+}
+void initializeQueue(Queue *Q){
+	(Q) = (Queue *) malloc(sizeof(Queue));
+	(Q)->head = NULL;
+	(Q)->tail = NULL;
+	(Q)->capacity = 0;
+}
+/**
+ * @brief create an element of Queue
+ * @param i the time of element is created
+ * @param j the gate origin
+ * @param k the gate destination
+ */
+Arr createArr(double i, int j, int k) {
 
 	struct Arr a;
 	a.arrival = i;
@@ -53,8 +67,12 @@ struct Arr createArr(double i, int j, int k) {
 	return a;
 };
 
-// The function to add a key k to q 
-void push(struct Queue* q, struct Arr a) 
+/**
+ * @brief push an element <Arr> type to corresponding Q
+ * @param q queue to push
+ * @param a element to be addes
+ */
+void push(Queue* q, Arr a) 
 { 
 	// Create a new LL node 
 	struct QNode* temp = newNode(a); 
@@ -67,66 +85,93 @@ void push(struct Queue* q, struct Arr a)
 
 	// Add the new node at the end of queue and change tail 
 	q->tail->next = temp; 
-	q->tail = temp; 
+	q->tail = temp;
+	q->capacity += 1;
 } 
 
 // Function to remove a key from given queue q 
-void pop(struct Queue* q) 
+Arr pop(Queue* q) 
 { 
-	// If queue is empty, return NULL. 
-	if (q->head == NULL)
-		{}
-	else {
-		// Store previous head and move head one node ahead 
-		struct QNode* temp = q->head;
+	// Store previous head and move head one node ahead 
+	QNode* temp = q->head;
+	Arr arr_temp = temp->key;
 
-		q->head = q->head->next; 
+	q->head = q->head->next; 
 
-		// If head becomes NULL, then change tail also as NULL 
-		if (q->head == NULL)
-			q->tail = NULL; 
-
-		temp = NULL;
-		free(temp);
-	} 
-} 
+	// If head becomes NULL, then change tail also as NULL 
+	if (q->head == NULL){
+		q->tail = NULL;
+	}
+	q->capacity -= 1;
+	return arr_temp;
+}
 
 
 // Function to remove a key based on gate_dest param, from given queue q 
-void pop_gate_dest(struct Queue* q, int gate_dest) 
+Arr pop_gate_dest(struct Queue* q, int gate_dest) 
 { 
-	// If queue is empty, return NULL. 
-	if (q->head == NULL)
-		{}
+	Arr arr_temp;
+	// Store previous head and move head one node ahead 
+
+	if (q->head->key.gate_dest == gate_dest){
+		return pop(q);
+	}
 	else {
-		// Store previous head and move head one node ahead 
+		QNode* node_pointer = NULL;
+		struct QNode* t = q->head;
+		/* struct Queue* temp = createQueue();
+		struct Arr a = createArr(t->key.arrival, t->key.gate_origin, t->key.gate_dest); */
 
-		if (q->head->key.gate_dest == gate_dest)
-			pop(q);
-		else {
-			struct Queue* temp = createQueue();
-			struct QNode* t = q->head;
-			struct Arr a = createArr(t->key.arrival, t->key.gate_origin, t->key.gate_dest);
-			int i;
+		/* push(temp, a);
+		while (t->next != NULL ) {
+			if (t->next->key.gate_dest != gate_dest) {
+				a = createArr(t->next->key.arrival, t->next->key.gate_origin, t->next->key.gate_dest);
+				push(temp, a);
+			}
+			t = t->next;
+		} */
 
-			push(temp, a);
-			while (t->next != NULL ) {
-				if (t->next->key.gate_dest != gate_dest) {
-					a = createArr(t->next->key.arrival, t->next->key.gate_origin, t->next->key.gate_dest);
-					push(temp, a);
-				}
+		while (t->next != NULL){
+			if (t->next->key.gate_dest != gate_dest){
 				t = t->next;
 			}
+			else{
+				// save pointer
+				node_pointer = t->next;
+				// save content
+				arr_temp = node_pointer->key;
+				// reposition pointer next
+				t->next = node_pointer->next;
 
-			*q = *temp;
-			t = NULL;
-			free(temp);
-			free(t);
+			}
 		}
-	} 
+		q->capacity -= 1;
+		free(node_pointer);
+		return arr_temp;
+	}
 } 
 
+int queueNotFull(Queue Q){
+	return (Q.capacity < 25);
+}
+
+int passengerOnQueue(int gate_destination, Queue Q){
+	int isFound = 0;
+	QNode *t = Q.head;
+
+	while (t != NULL){
+		if (t->key.gate_dest == gate_destination){
+			return 1;
+		}
+		else{
+			t = t->next;
+		}
+	}
+	return 0;
+}
 // Driver Program to test anove functions 
+
+/*
 int main() 
 { 
 	struct Queue* q = createQueue(); 
@@ -173,3 +218,4 @@ int main()
 	free(succ);
 	return 0; 
 } 
+*/
