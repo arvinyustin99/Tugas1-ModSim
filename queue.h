@@ -59,7 +59,7 @@ void initializeQueue(Queue *Q){
  */
 Arr createArr(double i, int j, int k) {
 
-	struct Arr a;
+	Arr a;
 	a.arrival = i;
 	a.gate_origin = j;
 	a.gate_dest = k;
@@ -75,7 +75,7 @@ Arr createArr(double i, int j, int k) {
 void push(Queue* q, Arr a) 
 { 
 	// Create a new LL node 
-	struct QNode* temp = newNode(a); 
+	QNode* temp = newNode(a); 
 
 	// If queue is empty, then new node is head and tail both 
 	if (q->tail == NULL) { 
@@ -108,8 +108,8 @@ Arr pop(Queue* q)
 
 
 // Function to remove a key based on gate_dest param, from given queue q 
-Arr pop_gate_dest(struct Queue* q, int gate_dest) 
-{ 
+Arr pop_gate_dest(Queue* q, int gate_dest) 
+{
 	Arr arr_temp;
 	// Store previous head and move head one node ahead 
 
@@ -142,7 +142,6 @@ Arr pop_gate_dest(struct Queue* q, int gate_dest)
 				arr_temp = node_pointer->key;
 				// reposition pointer next
 				t->next = node_pointer->next;
-
 			}
 		}
 		q->capacity -= 1;
@@ -151,23 +150,34 @@ Arr pop_gate_dest(struct Queue* q, int gate_dest)
 	}
 } 
 
-int queueNotFull(Queue Q){
-	return (Q.capacity < 25);
+int queueFull(Queue Q){
+	return (Q.capacity >= MAX_CAPACITY);
 }
 
+/**
+ * @brief search boolean there's a psger in a bus going to gate 'gate_destination'
+ * 
+ * @param gate_destination 
+ * @param Q 
+ * @return int 
+ */
 int passengerOnQueue(int gate_destination, Queue Q){
 	int isFound = 0;
 	QNode *t = Q.head;
-
-	while (t != NULL){
-		if (t->key.gate_dest == gate_destination){
-			return 1;
-		}
-		else{
-			t = t->next;
-		}
-	}
-	return 0;
+  if (t == NULL){
+    return 0;
+  }
+  
+  do{
+    if ((t->key).gate_dest == gate_destination){
+      printf("ini POQ\n");
+      return 1;
+    }
+    else{
+      t = t->next;
+    }
+  }while(t != NULL);
+  return 0;
 }
 // Driver Program to test anove functions 
 
