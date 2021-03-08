@@ -1,5 +1,5 @@
 #include "simlib.h"
-#include "queue.h"
+#include "queue.c"
 
 #define EVENT_ADD_QUEUE_1 8
 #define EVENT_ADD_QUEUE_2 9
@@ -63,7 +63,9 @@ double  startTimeWaitInStation,
         routeTime[NUM_STATIONS + 1],
         length_simulation,
         prob_stations_1_2[2 + 1];
-Queue queue_on_bus, queue_gate[NUM_STATIONS + 1];
+//Queue queue_on_bus, queue_gate[NUM_STATIONS + 1];
+Queue *queue_on_bus, *queue_gate[NUM_STATIONS + 1];
+
 
 void init_model();
 void unload();
@@ -101,11 +103,14 @@ void init_model(){
    * @brief routeTime[1] = mean time travelled from Station 1 to 2, and so on
    * 
    */
-  
-  initializeQueue(&queue_gate[1]);
+  queue_gate[1] = createQueue();
+  queue_gate[2] = createQueue();
+  queue_gate[3] = createQueue();
+  queue_on_bus = createQueue();
+  /* initializeQueue(&queue_gate[1]);
   initializeQueue(&queue_gate[2]);
   initializeQueue(&queue_gate[3]);
-  initializeQueue(&queue_on_bus);
+  initializeQueue(&queue_on_bus); */
 
   routeTime[1] = (1.0 * 3600) / BUS_SPEED;
   routeTime[2] = (4.5 * 3600) / BUS_SPEED;
@@ -145,7 +150,7 @@ void arrive(int current_gate){
     gate_destination = 3;
   }
   Arr new_passenger = createArr(sim_time, igate, gate_destination);
-  push(&queue_gate[igate], new_passenger);
+  push(queue_gate[igate], new_passenger);
   list_file(LAST, igate);
   load(igate);
 }
@@ -189,19 +194,20 @@ void unload(){
   if (isBusLeaving != 1){
     // check if corresponding station has queue
     // remove the queue with POP, and push BUS queue
-    if (passengerOnQueue(current_station, queue_on_bus) == 1 && isReadyToLoad != 1){
+    printf("GA ADA YANG MAU TURUN? %d\n", passengerOnQueue(current_station, *queue_on_bus));
+    if (passengerOnQueue(current_station, *queue_on_bus) == 1 && isReadyToLoad != 1){
 
       // CODE FOR UNLOADING PASSENGER OFF THE BUS
       // ...
-      Arr unloaded_passenger = pop_gate_dest(&queue_on_bus, current_station);
-      
+      Arr unloaded_passenger = pop_gate_dest(queue_on_bus, current_station);
+      printf("unloaded passenger %.4lf %d %d\n", unloaded_passenger.arrival, unloaded_passenger.gate_dest, unloaded_passenger.gate_origin);
       list_remove(FIRST, QUEUE_BUS);
 
       // Stats[F] Update Stats HERE for HOW LONG PEOPLE in system = unload time - arrival to gate
       sampst(sim_time - unloaded_passenger.arrival, SAMPST_PPL_SYS);
     }
     // check if there's more queue, schedule event
-    if (passengerOnQueue(current_station, queue_on_bus) == 1){
+    if (passengerOnQueue(current_station, *queue_on_bus) == 1){
       printf("perlu unload\n");
       event_schedule(sim_time + (double) uniform(UNLOAD_MIN, UNLOAD_MAX, STREAM_UNLOADING), EVENT_UNLOAD);
     }
@@ -233,15 +239,15 @@ void load(int request_gate){
       if (list_size[current_station] > 0 /*&& request_gate == current_station && isReadyToLoad == 1*/){
         if (request_gate == current_station){
           if (isReadyToLoad == 1){
-            if (queueFull(queue_on_bus) != 1){
+            if (list_size[QUEUE_BUS] < 25){
               // pop queue on station
               isAlreadyOnSeat = 0;
-              Arr passenger = pop(&queue_gate[current_station]);
+              Arr passenger = pop(queue_gate[current_station]);
               list_remove(FIRST, current_station);
               
               // push element to bus
               // ...
-              push(&queue_gate[current_station], passenger);
+              push(queue_on_bus, passenger);
               list_file(LAST, QUEUE_BUS);
               
               // Stats[B] input the delay of each passenger IN STATION to be loaded in corresponding station
@@ -251,24 +257,24 @@ void load(int request_gate){
               event_schedule(sim_time + (double) uniform(LOAD_MIN, LOAD_MAX, STREAM_LOADING), EVENT_LOAD);
             }
             else{
-              printf("Bus Full %d\n", queue_on_bus.capacity);
+              //printf("Bus Full %d\n", queue_on_bus.capacity);
             }
           }
           else{
-            printf("The bus not yet ready to be loaded\n");
+            //printf("The bus not yet ready to be loaded\n");
           }
         }
         else{
-          printf("The bus not yet arrived\n");
+          //printf("The bus not yet arrived\n");
         }
       }
       else{
-        printf("No passenger in gate\n");
+        //printf("No passenger in gate\n");
       }
     }
   }
   else{
-    printf("seated %.4f\n", sim_time);
+    //printf("seated %.4f\n", sim_time);
     isAlreadyOnSeat = 1;
   }
 }
@@ -347,12 +353,12 @@ int main(){
         break;
     }
   }while (next_event_type != EVENT_END_SIMUL);
-  printf("yang mau ke gate 1: %d\n", passengerOnQueue(1, queue_on_bus));
-  printf("yang mau ke gate 2: %d\n", passengerOnQueue(2, queue_on_bus));
-  printf("yang mau ke gate 3: %d\n", passengerOnQueue(3, queue_on_bus));
+  printf("yang mau ke gate 1: %d\n", passengerOnQueue(1, *queue_on_bus));
+  printf("yang mau ke gate 2: %d\n", passengerOnQueue(2, *queue_on_bus));
+  printf("yang mau ke gate 3: %d\n", passengerOnQueue(3, *queue_on_bus));
 
   //sampst(list_size[i], -sampst_queue_gate[i]);  
-  printf("yang ANTRI di gate 1: %d %d\n", queue_gate[1].capacity, list_size[1]);
-  printf("yang ANTRI di gate 2: %d %d\n", queue_gate[2].capacity, list_size[2]);
-  printf("yang ANTRI di gate 3: %d %d\n", queue_gate[3].capacity, list_size[3]);
+  printf("yang ANTRI di gate 1: %d %d\n", queue_gate[1]->capacity, list_size[1]);
+  printf("yang ANTRI di gate 2: %d %d\n", queue_gate[2]->capacity, list_size[2]);
+  printf("yang ANTRI di gate 3: %d %d\n", queue_gate[3]->capacity, list_size[3]);
 }
