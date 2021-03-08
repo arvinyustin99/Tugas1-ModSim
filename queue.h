@@ -144,6 +144,7 @@ Arr pop_gate_dest(Queue* q, int gate_dest)
 				// reposition pointer next
 				t->next = node_pointer->next;
 				q->capacity--;
+				break;
 			}
 		}
 		
