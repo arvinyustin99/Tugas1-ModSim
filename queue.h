@@ -45,12 +45,12 @@ Queue* createQueue()
 	q->capacity = 0;
 	return q; 
 }
-void initializeQueue(Queue *Q){
-	(Q) = (Queue *) malloc(sizeof(Queue));
-	(Q)->head = NULL;
-	(Q)->tail = NULL;
-	(Q)->capacity = 0;
-}
+// void initializeQueue(Queue *Q){
+// 	(Q) = (Queue *) malloc(sizeof(Queue));
+// 	(Q)->head = NULL;
+// 	(Q)->tail = NULL;
+// 	(Q)->capacity = 0;
+// }
 /**
  * @brief create an element of Queue
  * @param i the time of element is created
@@ -80,13 +80,14 @@ void push(Queue* q, Arr a)
 	// If queue is empty, then new node is head and tail both 
 	if (q->tail == NULL) { 
 		q->head = q->tail = temp; 
+		q->capacity++;
 		return; 
 	} 
 
 	// Add the new node at the end of queue and change tail 
 	q->tail->next = temp; 
 	q->tail = temp;
-	q->capacity += 1;
+	q->capacity++;
 } 
 
 // Function to remove a key from given queue q 
@@ -102,7 +103,7 @@ Arr pop(Queue* q)
 	if (q->head == NULL){
 		q->tail = NULL;
 	}
-	q->capacity -= 1;
+	q->capacity--;
 	return arr_temp;
 }
 
@@ -142,9 +143,10 @@ Arr pop_gate_dest(Queue* q, int gate_dest)
 				arr_temp = node_pointer->key;
 				// reposition pointer next
 				t->next = node_pointer->next;
+				q->capacity--;
 			}
 		}
-		q->capacity -= 1;
+		
 		free(node_pointer);
 		return arr_temp;
 	}
@@ -179,25 +181,20 @@ int passengerOnQueue(int gate_destination, Queue Q){
   }while(t != NULL);
   return 0;
 }
-// Driver Program to test anove functions 
 
+// Driver Program to test above functions 
 /*
 int main() 
 { 
-	struct Queue* q = createQueue(); 
-	// struct Arr* a = createArr(0.05, 1, 2); // = malloc(sizeof(struct Arr) * 3);
-	// struct Arr* b = createArr(0.12, 2, 3);
-	struct Arr a, b, c, d;
-	struct QNode* succ;
+	Queue* q = createQueue(); 
+	Arr a, b, c, d;
+	QNode* succ;
 	int i;
 	a = createArr(11.7,2,4);
 	d = createArr(0.9, 5, 6);
-	b.arrival = 0.5;
-	b.gate_origin = 1;
-	b.gate_dest = 5;
-
+	b = createArr(0.5, 1, 5);
 	c = createArr(12.5, 4, 6);
-
+	
 	push(q, a); 
 	push(q, b);
 	push(q, c);  
@@ -209,10 +206,10 @@ int main()
 		printf("%d : [%f, %d, %d]\n", i, succ->key.arrival, succ->key.gate_origin, succ->key.gate_dest);
 		i++;
 		succ = succ->next;
-		
 	}
 
 	pop_gate_dest(q, 6);
+	printf("%d\n", q->capacity);
 	printf("\n\n");
 
 	i = 1;
@@ -220,12 +217,10 @@ int main()
 	while (succ != NULL) {
 		printf("%d : [%f, %d, %d]\n", i, succ->key.arrival, succ->key.gate_origin, succ->key.gate_dest);
 		i++;
-		succ = succ->next;
-		
+		succ = succ->next;		
 	}
 
 	free(q);
 	free(succ);
 	return 0; 
-} 
-*/
+} */
