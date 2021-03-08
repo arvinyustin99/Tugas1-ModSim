@@ -173,7 +173,6 @@ int passengerOnQueue(int gate_destination, Queue Q){
   
   do{
     if ((t->key).gate_dest == gate_destination){
-      printf("ini POQ\n");
       return 1;
     }
     else{
