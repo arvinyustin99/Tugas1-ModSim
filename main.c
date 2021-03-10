@@ -400,4 +400,3 @@ int main(){
     }
   }while (next_event_type != EVENT_END_SIMUL);
 }
-
