@@ -37,6 +37,7 @@
 #define SAMPST_WAIT_GATE_3 10
 
 #define SAMPST_PPL_SYS 11
+#define SAMPST_ONE_LAP 12
 
 #define STREAM_INTERARRIVAL_1 1
 #define STREAM_INTERARRIVAL_2 2
@@ -45,10 +46,12 @@
 #define STREAM_LOADING 5
 #define STREAM_RANDOM_GATE 6
 
+#define DEFAULT_STATION 3
 #define BUS_SPEED 30
 #define NUM_STATIONS 3
 
-short sampst_delay_gate[NUM_STATIONS + 1],
+short lap,
+      sampst_delay_gate[NUM_STATIONS + 1],
       sampst_queue_gate[NUM_STATIONS + 1],
       sampst_wait_gate[NUM_STATIONS + 1];
 
@@ -60,7 +63,9 @@ int num_stations,
     isAlreadyOff,
     isReadyToLoad,
     isDepartSet;
-double  startTimeWaitInStation,
+double  timeArrivalPerson,
+        startTimeWaitInStation,
+        startTimeOneLap,
         mean_interarrival[NUM_STATIONS + 1],
         routeTime[NUM_STATIONS + 1],
         length_simulation,
@@ -84,13 +89,16 @@ void init_model(){
    * - simulation starts from Station 3
    * - initiate the array for easy access to sampst
    */
-  current_station = 3;
+  current_station = DEFAULT_STATION;
   isBusArrived = 0;
   isBusLeaving = 0;
   isReadyToLoad = 0;
   isAlreadyOnSeat = 1;
   isAlreadyOff = 1;
   isDepartSet = 0;
+  lap = 0;
+  timeArrivalPerson = 0.0;
+
   sampst_delay_gate[1] = SAMPST_DELAY_GATE_1;
   sampst_delay_gate[2] = SAMPST_DELAY_GATE_2;
   sampst_delay_gate[3] = SAMPST_DELAY_GATE_3;
@@ -137,14 +145,7 @@ void arrive(int current_gate){
    */
   int igate = current_gate - 7;
   event_schedule(sim_time + expon(mean_interarrival[igate], igate), current_gate);
-  /**
-   * 
-   * int gate_destination = random_integer(<isi probabilities disini>, 2);
-   * queueElement q_temp = createElement(sim_time, current_gate, gate_destination);
-   * listInsert(q_temp, queue[current_gate]);
-   * popQueue(<statiun destination>, queue);
-   * code di atas akan mengganti 2 baris di bawah ini
-   */
+ 
   int gate_destination;
   if (igate == 3){
     gate_destination = gaterandom();
@@ -163,8 +164,17 @@ void depart(){
    * Set to the next station
    * Set the bus haven't arrived to Next station
    * Schedule event for next arrival
-   */
-  printf("Current passenger in Bus %d\n", list_size[QUEUE_BUS]);
+  */
+
+  // Mark the stats for calculating ONE LAP
+  if (current_station == DEFAULT_STATION && lap > 0){
+    sampst(sim_time - startTimeOneLap, SAMPST_ONE_LAP);
+    startTimeOneLap = sim_time;
+  }
+  lap += 1;
+
+  sampst(sim_time - startTimeWaitInStation, sampst_wait_gate[current_station]);
+
   event_schedule(sim_time + routeTime[current_station], EVENT_UNLOAD);
   current_station = (current_station % 3) + 1;
   isBusArrived = 0;
@@ -184,6 +194,7 @@ void unload(){
     isBusLeaving = 0;
     isReadyToLoad = 0;
     isDepartSet = 0;
+
     // mark the time for calculating how long the bus wait in Each Station
     startTimeWaitInStation = sim_time;
 
@@ -191,7 +202,7 @@ void unload(){
     sampst(list_size[current_station], sampst_queue_gate[current_station]);
     // Stats [C] Update stats for Number passenger in Bus
     sampst(list_size[QUEUE_BUS], SAMPST_SEAT_BUS);
-    printf("Arrived at GATE %d\n", current_station);
+    printf("ARRIVE_AT_GATE %d\n", current_station);
   }
   
   // Check if any passenger in bus to be unloaded in this bus
@@ -207,10 +218,10 @@ void unload(){
         Arr unloaded_passenger = pop_gate_dest(queue_on_bus, current_station);
         list_remove(FIRST, QUEUE_BUS);
 
+        timeArrivalPerson = unloaded_passenger.arrival;
+
         isAlreadyOff = 0;
 
-        // Stats[F] Update Stats HERE for HOW LONG PEOPLE in system = unload time - arrival to gate
-        sampst(sim_time - unloaded_passenger.arrival, SAMPST_PPL_SYS);
         event_schedule(sim_time + (double) uniform(UNLOAD_MIN, UNLOAD_MAX, STREAM_UNLOADING), EVENT_UNLOAD);
       }
       // else, BUS ready to LOAD
@@ -227,7 +238,9 @@ void unload(){
   }
   // There a passenger just have been of the bus
   else{
-    printf("Off the bus %.4f\n", sim_time);
+    // Stats[F] Update Stats HERE for HOW LONG PEOPLE in system = unload time - arrival to gate
+    printf("OFF_THE_BUS\t %.4f\n", sim_time);
+    sampst(sim_time - timeArrivalPerson, SAMPST_PPL_SYS);
     isAlreadyOff = 1;
     event_schedule(sim_time, EVENT_UNLOAD);
   }
@@ -242,7 +255,7 @@ void load(int request_gate){
       // Calculate the time the bus is waiting on each stations
       if (isDepartSet == 0){
         isDepartSet = 1;
-        sampst(sim_time - startTimeWaitInStation, sampst_wait_gate[current_station]);
+        
         event_schedule(sim_time, EVENT_DEPART); 
       }
       else{
@@ -266,7 +279,7 @@ void load(int request_gate){
               
               // Stats[B] input the delay of each passenger IN STATION to be loaded in corresponding station
               sampst(sim_time - passenger.arrival, sampst_delay_gate[current_station]);
-              printf("ada yang naik nunggu: %.3lf time: %.4f\n", passenger.arrival, sim_time);
+              printf("LOADING_INTO_BUS\t %.3lf time: %.4f\n", passenger.arrival, sim_time);
               // Check if there's queue
               event_schedule(sim_time + (double) uniform(LOAD_MIN, LOAD_MAX, STREAM_LOADING), EVENT_LOAD);
             }
@@ -288,7 +301,7 @@ void load(int request_gate){
     }
   }
   else{
-    printf("seated %.4f\n", sim_time);
+    printf("SEATED\t %.4f\n", sim_time);
     isAlreadyOnSeat = 1;
   }
 }
@@ -307,20 +320,39 @@ int gaterandom(){
 
 void report(){
   // 
-  printf("Average, maximum, minimum number in each queue\n");
+  printf("\nNUMBER in each queue\n");
+  printf("\t\t Avg\t\t Max\n");
   for (int i = 1; i <= NUM_STATIONS; i++){
     sampst(list_size[i], -sampst_queue_gate[i]);
-    printf("Gate %d \t%.4f \t%.4lf \t%.4lf\n", sampst_queue_gate[i], transfer[1], transfer[3], transfer[4]);
+    printf("Gate %d \t\t%.2lf \t\t%.2lf\n", i, transfer[1], transfer[3]);
   }
-  printf("Average and maximum DELAYS in each queue\n");
+  
+  printf("\nDELAYS in each queue\n");
+  printf("\t\t Avg\t\t Max\n");
   for (int i = 1; i <= NUM_STATIONS; i++){
     sampst(list_size[i], -sampst_delay_gate[i]);
-    printf("Gate %d \t%.4f \t%.4lf\n", sampst_delay_gate[i], transfer[1], transfer[3]);
+    printf("Gate %d \t\t%.1lf \t%.1lf\n", sampst_delay_gate[i], transfer[1], transfer[3]);
   }
-  printf("Average and maximum Seat occupied in Bus\n");
+
   sampst(list_size[0], -SAMPST_SEAT_BUS);
-  printf("Average \t%.4f\n", transfer[1]);
-  printf("Maximum \t%.4f\n", transfer[3]);
+  printf("\n\t\t\t Avg\t Max\n");
+  printf("SEAT occupied in Bus\t%.1lf\t %.1lf\n", transfer[1], transfer[3]);
+
+  printf("\nWAITING TIME in each Terminal\n");
+  printf("\t\t Avg\t\t Max\t\t Min\n");
+  for (int i = 1; i <= NUM_STATIONS; i++){
+    sampst(list_size[i], -sampst_wait_gate[i]);
+    printf("Gate %d \t\t%.1lf \t\t%.1lf \t\t%.1lf\n", i, transfer[1], transfer[3], transfer[4]);
+  }
+
+  sampst(list_size[0], -SAMPST_ONE_LAP);
+  printf("\n\t\t Avg\t Max\t Min\n");
+  printf("1-Lap Time \t%.1lf\t %.1lf\t %.1lf\n", transfer[1], transfer[3], transfer[4]);
+  printf("Last Lap %d\n", lap);
+
+  sampst(list_size[0], -SAMPST_PPL_SYS);
+  printf("\n\t\t Avg\t Max\t\t Min\n");
+  printf("INDV In-system \t%.1lf\t %.1lf\t %.1lf\n", transfer[1], transfer[3], transfer[4]);
 }
 int main(){
   length_simulation = 80.0 * 3600;
@@ -332,16 +364,16 @@ int main(){
   do{
     timing();
     if (next_event_type == EVENT_DEPART){
-      printf("EVENT_DEPART from gate %d \ttime: %.4f\n\n", current_station, sim_time);
+      printf("EVENT_DEPART\t\t %d \ttime: %.4f\n\n", current_station, sim_time);
     }
     else if (next_event_type == EVENT_UNLOAD){
-      printf("\nEVENT_UNLOAD in gate %d \ttime: %.4f\n", current_station, sim_time);
+      printf("EVENT_UNLOAD\t\t %d \ttime: %.4f\n", current_station, sim_time);
     }
     else if (next_event_type == EVENT_LOAD){
-      printf("EVENT_LOAD in gate %d \ttime: %.4f\n", current_station, sim_time);
+      printf("EVENT_LOAD\t\t %d \ttime: %.4f\n", current_station, sim_time);
     }
     else if (next_event_type == EVENT_BUS_LEAVE){
-      printf("EVENT_LEAVING from gate %d \ttime: %.4f\n", current_station, sim_time);
+      printf("EVENT_LEAVING\t\t %d \ttime: %.4f\n", current_station, sim_time);
     }
 
     switch(next_event_type){
@@ -367,12 +399,5 @@ int main(){
         break;
     }
   }while (next_event_type != EVENT_END_SIMUL);
-  printf("yang mau ke gate 1: %d\n", passengerOnQueue(1, *queue_on_bus));
-  printf("yang mau ke gate 2: %d\n", passengerOnQueue(2, *queue_on_bus));
-  printf("yang mau ke gate 3: %d\n", passengerOnQueue(3, *queue_on_bus));
-
-  //sampst(list_size[i], -sampst_queue_gate[i]);  
-  printf("yang ANTRI di gate 1: %d %d\n", queue_gate[1]->capacity, list_size[1]);
-  printf("yang ANTRI di gate 2: %d %d\n", queue_gate[2]->capacity, list_size[2]);
-  printf("yang ANTRI di gate 3: %d %d\n", queue_gate[3]->capacity, list_size[3]);
 }
+
