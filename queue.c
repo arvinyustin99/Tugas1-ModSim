@@ -2,7 +2,7 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 
-#define MAX_CAPACITY 25
+#define MAX_CAPACITY 20
 
 typedef struct Arr {
 	double arrival;
