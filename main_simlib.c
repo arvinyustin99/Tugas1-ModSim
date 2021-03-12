@@ -290,7 +290,9 @@ void load(int request_gate){
               isAlreadyOnSeat = 0;
               
               // Check if there's queue
-              event_schedule(sim_time + (double) uniform(LOAD_MIN, LOAD_MAX, STREAM_LOADING), EVENT_LOAD);
+              double test = uniform(LOAD_MIN, LOAD_MAX, STREAM_LOADING);
+              printf("LOAD UP %.4lf\t%.4lf\n", test, sim_time);
+              event_schedule(sim_time + test, EVENT_LOAD);
             }
             else{
               if (sim_time - tempArrival < WAIT_IN_STATION * 60){
